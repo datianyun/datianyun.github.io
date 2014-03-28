@@ -1,3 +1,3 @@
-# mojobojo dot com
+# github blog 
 
-Potential forkers:  Make sure you change the google analytics key :)
+从别人那拉来的 作为自己的blog
