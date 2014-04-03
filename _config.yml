@@ -1,4 +1,4 @@
-title: datianyun's Front-end Developer Blog
+title: 前端学习笔记
 permalink: /blog/:year/:month/:day/:title
 markdown: rdiscount
 pygments: true
