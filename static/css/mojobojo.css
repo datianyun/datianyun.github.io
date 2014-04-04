@@ -71,7 +71,7 @@ a:hover {
 	margin: 2em;
 }
 
-#post .pre{
+#post pre{
 	margin: 1em 0;
 	font-size: 12px;
 	background-color: #eee;
@@ -86,7 +86,7 @@ a:hover {
 	border-radius: 3px;
 }
 
-# post .pre code{
+# post pre code{
 	padding: 0!important;
 	font-size: 12px!important;
 	background-color: #eee!important;
