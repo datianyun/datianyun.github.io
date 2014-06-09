@@ -155,5 +155,6 @@ var valueOfReferenceType = {
 ````javascript
 var foo = 10;
 function bar() {}
+
 ````
 
