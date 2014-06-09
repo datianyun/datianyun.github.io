@@ -68,7 +68,7 @@ foo(true);
 之后，ECStack就被修改成如下所示:
 
 
-`````
+`````javascript
 //首先激活foo函数
 ECStack = [
      functionContext
