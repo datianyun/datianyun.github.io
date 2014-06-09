@@ -96,6 +96,7 @@ foo.test(); // false, 10
 理解并谨记这一点是非常必要的，有利于在任何上下文中都能准确的确定this的值。
 
 影响调用上下文中的this的值的只有可能是调用表达式的形式，也就是调用函数的方式。 （一些关于JavaScript的文章和书籍中指出的“this的值取决于函数的定义方式，如果是全局函数，则this的值就会设置为全局对象，如果是某个对象的方法，则this的值就会设置为该对象”——这纯属扯淡，根本就是在误人子弟）。 正如此前大家看到的，纵然是全局函数，this的值也会随着函数调用方式的不同而不同：
+
 `````javascript
 function foo() {
   alert(this);
@@ -111,9 +112,9 @@ foo.prototype.constructor(); // foo.prototype
 
 `````
 
-调用一个对象的某个方法的时候，this的值也有可能不是该对象的：
 
 `````javascript
+
 var foo = {
   bar: function () {
     alert(this);
@@ -155,5 +156,6 @@ var valueOfReferenceType = {
 ````javascript
 var foo = 10;
 function bar() {}
+
 ````
 
