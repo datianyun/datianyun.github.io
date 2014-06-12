@@ -156,6 +156,203 @@ var valueOfReferenceType = {
 ````javascript
 var foo = 10;
 function bar() {}
+````
+
+
+中间过程中，对应的引用类型的值如下所示：
+
+
+````javascript
+var fooReference = {
+  base: global,
+  propertyName: 'foo'
+};
+ 
+var barReference = {
+  base: global,
+  propertyName: 'bar'
+};
 
 ````
+
+要从引用类型的值中获取一个对象实际的值需要GetValue方法，该方法用伪代码可以描述成如下形式：
+
+````javascript
+
+function GetValue(value) {
+ 
+  if (Type(value) != Reference) {
+    return value;
+  }
+ 
+  var base = GetBase(value);
+ 
+  if (base === null) {
+    throw new ReferenceError;
+  }
+ 
+  return base.[[Get]](GetPropertyName(value));
+ 
+}
+
+````
+
+````javascript
+GetValue(fooReference); // 10
+GetValue(barReference); // function object "bar"
+
+````
+
+对于属性访问来说，有两种方式： 点符号（这时属性名是正确的标识符并且提前已经知道了）或者中括号符号：
+
+````javascript
+foo.bar();
+foo['bar']();
+
+````
+
+中间过程中，得到如下的引用类型的值：
+
+
+
+````javascript
+var fooBarReference = {
+  base: foo,
+  propertyName: 'bar'
+};
+ 
+GetValue(fooBarReference); // function object "bar"
+
+````
+
+问题又来了，引用类型的值又是如何影响函数上下文中this的值的呢？——非常重要。这也是本文的重点。总的来说，决定函数上下文中this的值的规则如下所示：
+
+
+````
+函数上下文中this的值是函数调用者提供并且由当前调用表达式的形式而定的。 如果在调用括号()的左边，有引用类型的值，那么this的值就会设置为该引用类型值的base对象。 所有其他情况下（非引用类型），this的值总是null。然而，由于null对于this来说没有任何意义，因此会隐式转换为全局对象。
+
+````
+
+#引用类型以及null（this的值）
+
+有这么一种情况下，当调用表达式左侧是引用类型的值，但是this的值却是null，最终变为全局对象。 发生这种情况的条件是当引用类型值的base对象恰好为活跃对象。
+
+当内部子函数在父函数中被调用的时候就会发生这种情况。正如第二章介绍的， 局部变量，内部函数以及函数的形参都会存储在指定函数的活跃对象中：
+
+````javascript
+function foo() {
+  function bar() {
+    alert(this); // global
+  }
+  bar(); // 和AO.bar()是一样的
+}
+
+````
+
+活跃对象总是会返回this值为——null（用伪代码来表示，AO.bar()就相当于null.bar()）。然后，如此前描述的，this的值最终会由null变为全局对象。
+
+当函数调用包含在with语句的代码块中，并且with对象包含一个函数属性的时候，就会出现例外的情况。with语句会将该对象添加到作用域链的最前面，在活跃对象的之前。 相应地，在引用类型的值（标识符或者属性访问）的情况下，base对象就不再是活跃对象了，而是with语句的对象。另外，值得一提的是，它不仅仅只针对内部函数，全局函数也是如此， 原因就是with对象掩盖了作用域链中更高层的对象（全局对象或者活跃对象）：
+
+````javascript
+var x = 10;
+ 
+with ({
+ 
+  foo: function () {
+    alert(this.x);
+  },
+  x: 20
+ 
+}) {
+ 
+  foo(); // 20
+ 
+}
+ 
+// because
+ 
+var  fooReference = {
+  base: __withObject,
+  propertyName: 'foo'
+};
+
+````
+
+当调用的函数恰好是catch从句的参数时，情况也是类似的：在这种情况下，catch对象也会添加到作用域链的最前面，在活跃对象和全局对象之前。 然而，这个行为在ECMA-262-3中被指出是个bug，并且已经在ECMA-262-5中修正了；因此，在这种情况下，this的值应该设置为全局对象，而不是catch对象。
+
+````javascript
+try {
+  throw function () {
+    alert(this);
+  };
+} catch (e) {
+  e(); // __catchObject - in ES3, global - fixed in ES5
+}
+ 
+// on idea
+ 
+var eReference = {
+  base: __catchObject,
+  propertyName: 'e'
+};
+ 
+// 然而，既然这是个bug
+// 那就应该强制设置为全局对象
+// null => global
+ 
+var eReference = {
+  base: global,
+  propertyName: 'e'
+};
+
+````
+
+同样的情况还会在递归调用一个非匿名函数的时候发生（函数相关的内容会在第五章作相应的介绍）。在第一次函数调用的时候，base对象是外层的活跃对象（或者全局对象）， 在接下来的递归调用的时候——base对象应当是一个存储了可选的函数表达式名字的特殊对象，然而，事实却是，在这种情况下，this的值永远都是全局对象：
+
+````javascript
+
+(function foo(bar) {
+ 
+  alert(this);
+ 
+  !bar && foo(1); // "should" be special object, but always (correct) global
+ 
+})(); // global
+
+````
+#当函数作为构造器被调用时this的值
+
+这里要介绍的是函数上下文中关于this值的另外一种情况——当函数作为构造器被调用的时候：
+
+````javascript
+
+function A() {
+  alert(this); // newly created object, below - "a" object
+  this.x = 10;
+}
+ 
+var a = new A();
+alert(a.x); // 10
+
+````
+
+#手动设置函数调用时this的值
+
+Function.prototype上定义了两个方法（因此，它们对所有函数而言都是可访问的），允许手动指定函数调用时this的值。这两个方法是：.apply和.call； 它们都接受第一个参数作为调用上下文中this的值。而它们的不同点其实无关紧要：对于.apply来说，第二个参数接受数组类型（或者是类数组的对象，比如arguments）, 而.call方法接受任意多的参数。这两个方法只有第一个参数是必要的——this的值。
+
+````javascript
+var b = 10;
+ 
+function a(c) {
+  alert(this.b);
+  alert(c);
+}
+ 
+a(20); // this === global, this.b == 10, c == 20
+ 
+a.call({b: 20}, 30); // this === {b: 20}, this.b == 20, c == 30
+a.apply({b: 30}, [40]) // this === {b: 30}, this.b == 30, c == 40
+
+````
+
 
